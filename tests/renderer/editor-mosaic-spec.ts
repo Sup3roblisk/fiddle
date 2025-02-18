@@ -1,11 +1,15 @@
+import { mocked } from 'jest-mock';
 import { reaction } from 'mobx';
 
 import { EditorId, EditorValues, MAIN_JS } from '../../src/interfaces';
-import { Editor, EditorMosaic, EditorPresence } from '../../src/renderer/editor-mosaic';
+import {
+  Editor,
+  EditorMosaic,
+  EditorPresence,
+} from '../../src/renderer/editor-mosaic';
 import { getEmptyContent } from '../../src/utils/editor-utils';
 import {
   AppMock,
-  ElectronFiddleMock,
   MonacoEditorMock,
   MonacoMock,
   createEditorValues,
@@ -20,11 +24,11 @@ describe('EditorMosaic', () => {
   let app: AppMock;
 
   beforeEach(() => {
-    ({ app, monaco } = (window.ElectronFiddle as unknown as ElectronFiddleMock));
+    ({ app, monaco } = window as any);
 
     // inject a real EditorMosaic into our mock scaffolding
     editorMosaic = new EditorMosaic();
-    app.state.editorMosaic = editorMosaic as any;
+    app.state.editorMosaic = editorMosaic;
 
     editor = new MonacoEditorMock() as unknown as Editor;
     valuesIn = createEditorValues();
@@ -79,7 +83,7 @@ describe('EditorMosaic', () => {
       // setup: put visible file into the mosaic and then hide it.
       // this should cause EditorMosaic to cache the viewstate offscreen.
       const viewState = Symbol('some unique viewstate');
-      (editor.saveViewState as jest.Mock).mockReturnValueOnce(viewState);
+      mocked(editor.saveViewState).mockReturnValueOnce(viewState as any);
       editorMosaic.addEditor(id, editor);
       editorMosaic.hide(id);
       expect(editorMosaic.files.get(id)).toBe(EditorPresence.Hidden);
@@ -220,18 +224,36 @@ describe('EditorMosaic', () => {
 
       // now modify values _after_ calling editorMosaic.set()
       for (const [file, value] of Object.entries(values)) {
-        values[file] = `${value} plus more text`;
+        values[file as EditorId] = `${value} plus more text`;
       }
 
       // and then add Monaco editors
       for (const [file, value] of Object.entries(values)) {
         const editor = new MonacoEditorMock() as unknown as Editor;
-        editorMosaic.addEditor(file as any, editor);
+        editorMosaic.addEditor(file as EditorId, editor);
         editor.setValue(value as string);
       }
 
       // values() should match the modified values
       expect(editorMosaic.values()).toStrictEqual(values);
+    });
+  });
+
+  describe('addNewFile()', () => {
+    it('sets isEdited to true', () => {
+      editorMosaic.set(createEditorValues());
+      editorMosaic.isEdited = false;
+      editorMosaic.addNewFile('foo.js');
+      expect(editorMosaic.isEdited).toBe(true);
+    });
+  });
+
+  describe('remove()', () => {
+    it('sets isEdited to true', () => {
+      editorMosaic.set(createEditorValues());
+      editorMosaic.isEdited = false;
+      editorMosaic.remove('renderer.js');
+      expect(editorMosaic.isEdited).toBe(true);
     });
   });
 
@@ -305,7 +327,10 @@ describe('EditorMosaic', () => {
         editorMosaic.set(valuesIn);
         for (const [id, presence] of editorMosaic.files) {
           if (presence === EditorPresence.Pending) {
-            editorMosaic.addEditor(id, new MonacoEditorMock() as unknown as Editor);
+            editorMosaic.addEditor(
+              id,
+              new MonacoEditorMock() as unknown as Editor,
+            );
           }
         }
 
@@ -367,7 +392,7 @@ describe('EditorMosaic', () => {
         direction: 'row',
         first: {
           direction: 'column',
-          first: 'main.js',
+          first: MAIN_JS,
           second: 'renderer.js',
         },
         second: {
@@ -423,7 +448,7 @@ describe('EditorMosaic', () => {
       const id = MAIN_JS;
       editorMosaic.set(valuesIn);
       editorMosaic.addEditor(id, editor);
-      (editor.hasTextFocus as jest.Mock).mockReturnValue(true);
+      mocked(editor.hasTextFocus).mockReturnValue(true);
 
       expect(editorMosaic.focusedEditor()).toBe(editor);
     });
@@ -440,13 +465,13 @@ describe('EditorMosaic', () => {
       const content = '// content';
       const editor = new MonacoEditorMock() as unknown as Editor;
       editorMosaic.set({ [id]: content });
-      await editorMosaic.addEditor(id, editor);
+      editorMosaic.addEditor(id, editor);
 
       editorMosaic.layout();
       editorMosaic.layout();
       editorMosaic.layout();
       editorMosaic.layout();
-      await waitFor(() => (editor.layout as jest.Mock).mock.calls.length > 0);
+      await waitFor(() => mocked(editor.layout).mock.calls.length > 0);
 
       expect(editor.layout).toHaveBeenCalledTimes(1);
     });

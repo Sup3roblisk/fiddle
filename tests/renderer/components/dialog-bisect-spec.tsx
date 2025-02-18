@@ -1,18 +1,19 @@
 import * as React from 'react';
 
-import { InstallState } from '@electron/fiddle-core';
 import { shallow } from 'enzyme';
+import { mocked } from 'jest-mock';
 
 import {
   ElectronReleaseChannel,
+  InstallState,
   RunResult,
   VersionSource,
 } from '../../../src/interfaces';
 import { Bisector } from '../../../src/renderer/bisect';
 import { BisectDialog } from '../../../src/renderer/components/dialog-bisect';
-import { StateMock } from '../../mocks/mocks';
 import { Runner } from '../../../src/renderer/runner';
 import { AppState } from '../../../src/renderer/state';
+import { StateMock } from '../../mocks/mocks';
 
 jest.mock('../../../src/renderer/bisect');
 
@@ -28,13 +29,16 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
     }));
 
   beforeEach(() => {
-    ({ runner, state: store } = window.ElectronFiddle.app);
+    ({ runner, state: store } = window.app);
 
-    (store as unknown as StateMock).versionsToShow = generateVersionRange(numVersions);
+    (store as unknown as StateMock).versionsToShow =
+      generateVersionRange(numVersions);
     (store as unknown as StateMock).versions = Object.fromEntries(
       store.versionsToShow.map((ver) => [ver.version, ver]),
     );
-    (store as unknown as StateMock).channelsToShow = [ElectronReleaseChannel.stable];
+    (store as unknown as StateMock).channelsToShow = [
+      ElectronReleaseChannel.stable,
+    ];
   });
 
   it('renders', () => {
@@ -79,7 +83,7 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
   describe('onBeginSelect()', () => {
     it('sets the begin version', () => {
       const wrapper = shallow(<BisectDialog appState={store} />);
-      const instance: any = wrapper.instance() as any;
+      const instance: any = wrapper.instance();
 
       expect(instance.state.startIndex).toBe(
         numVersions > 10 ? 10 : numVersions - 1,
@@ -92,7 +96,7 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
   describe('onEndSelect()', () => {
     it('sets the end version', () => {
       const wrapper = shallow(<BisectDialog appState={store} />);
-      const instance: any = wrapper.instance() as any;
+      const instance: any = wrapper.instance();
 
       expect(instance.state.endIndex).toBe(0);
       instance.onEndSelect(store.versionsToShow[2]);
@@ -103,9 +107,9 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
   describe('onSubmit()', () => {
     it('initiates a bisect instance and sets a version', async () => {
       const version = '1.0.0';
-      (Bisector as jest.Mock).mockReturnValue({
+      mocked(Bisector).mockReturnValue({
         getCurrentVersion: () => ({ version }),
-      });
+      } as any);
 
       const versions = generateVersionRange(numVersions);
 
@@ -116,11 +120,11 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
         startIndex: versions.length - 1,
       });
 
-      const instance: any = wrapper.instance() as any;
+      const instance: any = wrapper.instance();
       await instance.onSubmit();
       expect(Bisector).toHaveBeenCalledWith(versions.reverse());
       expect(store.Bisector).toBeDefined();
-      expect(store.setVersion as jest.Mock).toHaveBeenCalledWith(version);
+      expect(store.setVersion).toHaveBeenCalledWith(version);
     });
 
     it('does nothing if endIndex or startIndex are falsy', async () => {
@@ -130,7 +134,7 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
         startIndex: undefined,
         endIndex: 0,
       });
-      const instance1: any = wrapper.instance() as any;
+      const instance1: any = wrapper.instance();
       await instance1.onSubmit();
       expect(Bisector).not.toHaveBeenCalled();
 
@@ -139,7 +143,7 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
         endIndex: undefined,
       });
 
-      const instance2: any = wrapper.instance() as any;
+      const instance2: any = wrapper.instance();
       await instance2.onSubmit();
       expect(Bisector).not.toHaveBeenCalled();
     });
@@ -155,10 +159,10 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
         startIndex: 4,
       });
 
-      (runner.autobisect as jest.Mock).mockResolvedValue(RunResult.SUCCESS);
+      mocked(runner.autobisect).mockResolvedValue(RunResult.SUCCESS);
 
       // click the 'auto' button
-      const instance1: any = wrapper.instance() as any;
+      const instance1: any = wrapper.instance();
       await instance1.onAuto();
 
       // check the results
@@ -172,7 +176,7 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
         startIndex: undefined,
         endIndex: 0,
       });
-      const instance1: any = wrapper.instance() as any;
+      const instance1: any = wrapper.instance();
       await instance1.onAuto();
       expect(Bisector).not.toHaveBeenCalled();
 
@@ -181,7 +185,7 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
         endIndex: undefined,
       });
 
-      const instance2: any = wrapper.instance() as any;
+      const instance2: any = wrapper.instance();
       await instance2.onAuto();
       expect(Bisector).not.toHaveBeenCalled();
     });
@@ -192,7 +196,7 @@ describe.each([8, 15])('BisectDialog component', (numVersions) => {
 
     beforeEach(() => {
       const wrapper = shallow(<BisectDialog appState={store} />);
-      instance = wrapper.instance() as any;
+      instance = wrapper.instance();
     });
 
     describe('isEarliestItemDisabled', () => {

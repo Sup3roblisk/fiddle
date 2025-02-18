@@ -10,36 +10,32 @@ describe('BlockAcceleratorsSettings component', () => {
   let store: AppState;
 
   beforeEach(() => {
-    ({ state: store } = window.ElectronFiddle.app);
+    ({ state: store } = window.app);
   });
 
   it('renders', () => {
-    const wrapper = shallow(
-      <BlockAcceleratorsSettings appState={store} />,
-    );
+    const wrapper = shallow(<BlockAcceleratorsSettings appState={store} />);
     expect(wrapper).toMatchSnapshot();
   });
 
   describe('handleBlockAcceleratorChange()', () => {
     it('handles a new selection', async () => {
-      const wrapper = shallow(
-        <BlockAcceleratorsSettings appState={store} />,
-      );
-      const instance = wrapper.instance() as any;
+      const wrapper = shallow(<BlockAcceleratorsSettings appState={store} />);
+      const instance: any = wrapper.instance();
 
-      await instance.handleBlockAcceleratorChange({
+      instance.handleBlockAcceleratorChange({
         currentTarget: { checked: false, value: BlockableAccelerator.save },
-      });
+      } as React.FormEvent<HTMLInputElement>);
 
-      expect(store.removeAcceleratorToBlock as jest.Mock).toHaveBeenCalledWith(
+      expect(store.removeAcceleratorToBlock).toHaveBeenCalledWith(
         BlockableAccelerator.save,
       );
 
-      await instance.handleBlockAcceleratorChange({
+      instance.handleBlockAcceleratorChange({
         currentTarget: { checked: true, value: BlockableAccelerator.save },
-      });
+      } as React.FormEvent<HTMLInputElement>);
 
-      expect(store.addAcceleratorToBlock as jest.Mock).toHaveBeenCalledWith(
+      expect(store.addAcceleratorToBlock).toHaveBeenCalledWith(
         BlockableAccelerator.save,
       );
     });

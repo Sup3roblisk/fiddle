@@ -1,5 +1,7 @@
 import { toJS } from 'mobx';
 
+import { FiddleEvent } from '../src/interfaces';
+
 const platform = process.platform;
 
 export function overridePlatform(value: NodeJS.Platform) {
@@ -57,26 +59,13 @@ export function resetRendererArch() {
   });
 }
 
-export function flushPromises() {
-  return new Promise((resolve) => setImmediate(resolve));
-}
-
-export function mockFetchOnce(text: string) {
-  (window.fetch as jest.Mock).mockImplementationOnce(() => {
-    return Promise.resolve({
-      text: jest.fn().mockResolvedValue(text),
-      json: jest.fn().mockResolvedValue(JSON.parse(text)),
-    });
-  });
-}
-
 export class FetchMock {
   private readonly urls: Map<string, string> = new Map();
   public add(url: string, content: string) {
     this.urls.set(url, content);
   }
   constructor() {
-    window.fetch = jest.fn().mockImplementation((url: string) => {
+    window.fetch = jest.fn().mockImplementation(async (url: string) => {
       const content = this.urls.get(url);
       if (!content) {
         console.trace('Unhandled mock URL:', url);
@@ -84,22 +73,20 @@ export class FetchMock {
           ok: false,
         };
       }
-      return Promise.resolve({
-        text: jest.fn().mockImplementation(() => Promise.resolve(content)),
-        json: jest
-          .fn()
-          .mockImplementation(() => Promise.resolve(JSON.parse(content))),
+      return {
+        text: jest.fn().mockResolvedValue(content),
+        json: jest.fn().mockImplementation(async () => JSON.parse(content)),
         ok: true,
-      });
+      };
     });
   }
 }
 
 // return an object containing props in 'a' that are different from in 'b'
-export function objectDifference<Type>(a: Type, b: Type): Type {
+export function objectDifference(a: any, b: any): Record<string, unknown> {
   const serialize = (input: any) => JSON.stringify(toJS(input));
 
-  const o = {};
+  const o: Record<string, unknown> = {};
   for (const entry of Object.entries(a)) {
     const key = entry[0];
     const val = toJS(entry[1]);
@@ -107,21 +94,31 @@ export function objectDifference<Type>(a: Type, b: Type): Type {
 
     o[key] = key === 'editorMosaic' ? objectDifference(val, b[key]) : toJS(val);
   }
-  return o as Type;
+  return o;
+}
+
+interface WaitForOptions {
+  /**
+   * polling frequency, in msec
+   * @defaultValue 100
+   */
+  interval: number;
+  /**
+   * timeout interval, in msec
+   * @defaultValue 2000
+   */
+  timeout: number;
 }
 
 /**
  * Waits up to `timeout` msec for a test to pass.
  *
- * @return a promise that returns the test result on success, or rejects on timeout
- * @param {() => any} test - function to test
- * @param {Object} options
- * @param {Number} [options.interval=100] - polling frequency, in msec
- * @param {Number} [options.timeout=2000] - timeout interval, in msec
+ * @param test - function to test
+ * @returns a promise that returns the test result on success, or rejects on timeout
  */
 export async function waitFor(
   test: () => any,
-  options = {
+  options: WaitForOptions = {
     interval: 100,
     timeout: 2000,
   },
@@ -141,4 +138,14 @@ export async function waitFor(
       setTimeout(check, interval);
     })();
   });
+}
+
+export function emitEvent(type: FiddleEvent, ...args: any[]) {
+  (window.ElectronFiddle.addEventListener as jest.Mock).mock.calls.forEach(
+    (call) => {
+      if (call[0] === type) {
+        call[1](...args);
+      }
+    },
+  );
 }

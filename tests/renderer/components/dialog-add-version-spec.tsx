@@ -1,14 +1,11 @@
 import * as React from 'react';
 
 import { shallow } from 'enzyme';
+import { mocked } from 'jest-mock';
 
-import { IpcEvents } from '../../../src/ipc-events';
 import { AddVersionDialog } from '../../../src/renderer/components/dialog-add-version';
-import { ipcRendererManager } from '../../../src/renderer/ipc';
 import { AppState } from '../../../src/renderer/state';
 import { overrideRendererPlatform } from '../../utils';
-
-jest.mock('../../../src/renderer/ipc');
 
 describe('AddVersionDialog component', () => {
   let store: AppState;
@@ -20,7 +17,7 @@ describe('AddVersionDialog component', () => {
     // platform, so let' have a uniform platform for unit tests
     overrideRendererPlatform('darwin');
 
-    ({ state: store } = window.ElectronFiddle.app);
+    ({ state: store } = window.app);
   });
 
   it('renders', () => {
@@ -62,21 +59,23 @@ describe('AddVersionDialog component', () => {
     const inp = wrapper.find('#custom-electron-version');
     inp.dive().find('input[type="file"]').simulate('click', { preventDefault });
 
-    expect(ipcRendererManager.send as jest.Mock).toHaveBeenCalledWith(
-      IpcEvents.SHOW_LOCAL_VERSION_FOLDER_DIALOG,
-    );
+    expect(window.ElectronFiddle.selectLocalVersion).toHaveBeenCalled();
     expect(preventDefault).toHaveBeenCalled();
   });
 
-  describe('setFolderPath()', () => {
-    it('does something', async () => {
-      // (getIsDownloaded as jest.Mock).mockReturnValue(true);
+  describe('selectLocalVersion()', () => {
+    it('updates state', async () => {
       const wrapper = shallow(<AddVersionDialog appState={store} />);
-      (wrapper.instance() as any).isValidElectronPath = () => true;
-      await (wrapper.instance() as any).setFolderPath('/test/');
+      mocked(window.ElectronFiddle.selectLocalVersion).mockResolvedValue({
+        folderPath: '/test/',
+        isValidElectron: true,
+        localName: 'Test',
+      });
+      await (wrapper.instance() as any).selectLocalVersion();
 
       expect(wrapper.state('isValidElectron')).toBe(true);
       expect(wrapper.state('folderPath')).toBe('/test/');
+      expect(wrapper.state('localName')).toBe('Test');
     });
   });
 
@@ -110,7 +109,7 @@ describe('AddVersionDialog component', () => {
 
       await (wrapper.instance() as any).onSubmit();
 
-      expect(store.addLocalVersion as jest.Mock).toHaveBeenCalledTimes(0);
+      expect(store.addLocalVersion).toHaveBeenCalledTimes(0);
     });
 
     it('adds a local version using the given data', async () => {
@@ -123,12 +122,13 @@ describe('AddVersionDialog component', () => {
 
       await (wrapper.instance() as any).onSubmit();
 
-      expect(store.addLocalVersion as jest.Mock).toHaveBeenCalledTimes(1);
-
-      const result = (store.addLocalVersion as jest.Mock).mock.calls[0][0];
-
-      expect(result.localPath).toBe('/test/path');
-      expect(result.version).toBe('3.3.3');
+      expect(store.addLocalVersion).toHaveBeenCalledTimes(1);
+      expect(store.addLocalVersion).toHaveBeenCalledWith(
+        expect.objectContaining({
+          localPath: '/test/path',
+          version: '3.3.3',
+        }),
+      );
     });
 
     it('shows dialog warning when adding duplicate local versions', async () => {

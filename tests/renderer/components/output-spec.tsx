@@ -24,8 +24,8 @@ describe('Output component', () => {
   let monaco: typeof MonacoType;
 
   beforeEach(() => {
-    monaco = window.ElectronFiddle.monaco;
-    ({ state: store } = window.ElectronFiddle.app);
+    monaco = window.monaco;
+    ({ state: store } = window.app);
   });
 
   it('renders the output container', () => {
@@ -55,8 +55,8 @@ describe('Output component', () => {
       instance.outputRef.current = 'ref';
       await instance.initMonaco();
 
-      expect(monaco.editor.create as jest.Mock).toHaveBeenCalled();
-      expect(monaco.editor.createModel as jest.Mock).toHaveBeenCalled();
+      expect(monaco.editor.create).toHaveBeenCalled();
+      expect(monaco.editor.createModel).toHaveBeenCalled();
     });
   });
 
@@ -70,7 +70,9 @@ describe('Output component', () => {
     await instance.initMonaco();
     instance.componentWillUnmount();
 
-    expect((monaco as unknown as MonacoMock).latestEditor.dispose as jest.Mock).toHaveBeenCalled();
+    expect(
+      (monaco as unknown as MonacoMock).latestEditor.dispose,
+    ).toHaveBeenCalled();
   });
 
   it('hides the console with react-mosaic-component', async () => {
@@ -129,8 +131,8 @@ describe('Output component', () => {
     await instance.initMonaco();
     instance.updateModel();
 
-    expect(monaco.editor.createModel as jest.Mock).toHaveBeenCalled();
-    expect(instance.editor.revealLine as jest.Mock).toHaveBeenCalled();
+    expect(monaco.editor.createModel).toHaveBeenCalled();
+    expect(instance.editor?.revealLine).toHaveBeenCalled();
   });
 
   it('updateModel correctly observes and gets called when output is updated', async () => {
@@ -179,8 +181,7 @@ describe('Output component', () => {
     instance.outputRef.current = 'ref';
     await instance.initMonaco();
 
-    // setContent will trigger componentDidUpdate()
-    instance.editor.setContent(store.output);
+    await instance.updateModel();
     expect(spy).toHaveBeenCalled();
   });
 });

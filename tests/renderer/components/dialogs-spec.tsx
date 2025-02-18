@@ -14,7 +14,7 @@ describe('Dialogs component', () => {
     // platform, so let' have a uniform platform for unit tests
     overrideRendererPlatform('darwin');
 
-    ({ state: store } = window.ElectronFiddle.app);
+    ({ state: store } = window.app);
     store.isGenericDialogShowing = true;
   });
 
@@ -30,7 +30,7 @@ describe('Dialogs component', () => {
     expect(wrapper.text()).toBe('<Settings /><GenericDialog />');
   });
 
-  it('renders the settings dialog', () => {
+  it('renders the add version dialog', () => {
     store.isAddVersionDialogShowing = true;
     const wrapper = shallow(<Dialogs appState={store} />);
     expect(wrapper.text()).toBe('<AddVersionDialog /><GenericDialog />');
